@@ -9,7 +9,7 @@ const docSlice = createSlice({
   name: "doc",
   initialState,
   reducers: {
-    genStart: (state) => {
+    genStart: (st) => {
       state.loading = true;
       state.error = null;
     },
