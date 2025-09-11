@@ -17,7 +17,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import type { Document, DocumentVersion } from "../../types/types";
 import classes from "./DocumentEditor.module.css";
 import RichTextEditor from "../RichTextEditor/RichTextEditor";
-import { useWebSocket } from "../../hooks/useWebsocket";
+import { useWebSocket } from "../../hooks/useWebSocket";
 
 const DocumentEditor = () => {
   const { documentId } = useParams<{ documentId: string }>();
