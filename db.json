@@ -1,8 +1,42 @@
 {
-  "templates": [
+  "documents": [
     {
-      "intLetter": "/templates/internal-letter.docx",
-      "extLetter": "/templates/external-letter.docx"
+      "id": "1757518328611",
+      "createdAt": "2025-09-10T15:32:08.611Z",
+      "updatedAt": "2025-09-10T17:43:42.975Z",
+      "title": "extLetter",
+      "content": "{\"recipient_name\":\"Петров П.П.\",\"recipient_position\":\"Техник\",\"recipient_workshop\":\"Цех 1\",\"sender_name\":\"Зайцев З.З.\",\"sender_position\":\"Зам. начальника\",\"sender_workshop\":\"Цех 5\",\"date\":\"10 сентября 2025 г.\"}",
+      "versions": [
+        {
+          "versionNumber": 1,
+          "title": "extLetter-Петров П.",
+          "content": "{\"recipient_name\":\"Петров П.П.\",\"recipient_position\":\"Техник\",\"recipient_workshop\":\"Цех 1\",\"sender_name\":\"Зайцев З.З.\",\"sender_position\":\"Зам. начальника\",\"sender_workshop\":\"Цех 5\",\"date\":\"10 сентября 2025 г.\"}",
+          "author": "Павел",
+          "timestamp": "2025-09-10T17:42:58.604Z"
+        },
+        {
+          "versionNumber": 2,
+          "title": "extLetter-Петров",
+          "content": "{\"recipient_name\":\"Петров П.П.\",\"recipient_position\":\"Техник\",\"recipient_workshop\":\"Цех 1\",\"sender_name\":\"Зайцев З.З.\",\"sender_position\":\"Зам. начальника\",\"sender_workshop\":\"Цех 5\",\"date\":\"10 сентября 2025 г.\"}",
+          "author": "Павел",
+          "timestamp": "2025-09-10T17:43:12.073Z"
+        },
+        {
+          "versionNumber": 3,
+          "title": "extLetter",
+          "content": "{\"recipient_name\":\"Петров П.П.\",\"recipient_position\":\"Техник\",\"recipient_workshop\":\"Цех 1\",\"sender_name\":\"Зайцев З.З.\",\"sender_position\":\"Зам. начальника\",\"sender_workshop\":\"Цех 5\",\"date\":\"10 сентября 2025 г.\"}",
+          "author": "Павел",
+          "timestamp": "2025-09-10T17:43:42.965Z"
+        }
+      ]
+    },
+    {
+      "id": "1757529869165",
+      "createdAt": "2025-09-10T18:44:29.165Z",
+      "updatedAt": "2025-09-10T18:44:29.166Z",
+      "title": "intLetter-Петров П.П.",
+      "content": "{\"recipient_name\":\"Петров П.П.\",\"recipient_position\":\"Техник\",\"recipient_workshop\":\"Цех 1\",\"sender_name\":\"Фёдоров Ф.Ф.\",\"sender_position\":\"Инженер\",\"sender_workshop\":\"Цех 3\",\"date\":\"10 сентября 2025 г.\"}",
+      "versions": []
     }
   ],
   "personal": [
@@ -125,6 +159,20 @@
       "workshop": "Цех 5",
       "position": "Зам. начальника",
       "name": "Зайцев З.З."
+    }
+  ],
+  "templates": [
+    {
+      "intLetter": "/templates/internal-letter.docx",
+      "extLetter": "/templates/external-letter.docx"
+    }
+  ],
+  "users": [
+    {
+      "id": "1",
+      "name": "admin",
+      "email": "admin@admin.com",
+      "password": "admin123"
     }
   ]
 }

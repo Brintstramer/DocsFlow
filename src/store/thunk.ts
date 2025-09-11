@@ -3,6 +3,35 @@ import type { Person, TemplateData, Templates } from "../types/types";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { saveAs } from "file-saver";
+import type { AuthRequest, AuthResponse } from "../types/authTypes";
+import { API_BASE_URL } from "../constants";
+import { createAuthHeaders } from "../utils/createAuthHeaders";
+import { tokenManager } from "../utils/tokenManager";
+
+export const loginUser = createAsyncThunk<
+  AuthResponse,
+  AuthRequest,
+  { rejectValue: string }
+>("auth/loginUser", async (authData, { rejectWithValue }) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(authData),
+    });
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+    const data = await response.json();
+    tokenManager.setToken(data.token);
+    localStorage.setItem("user", JSON.stringify(data.user));
+    return data;
+  } catch (error) {
+    return rejectWithValue((error as Error).message);
+  }
+});
 
 export const fetchTemplates = createAsyncThunk<
   Templates,
@@ -10,7 +39,9 @@ export const fetchTemplates = createAsyncThunk<
   { rejectValue: string }
 >("doc/fetchTemplates", async (_, { rejectWithValue }) => {
   try {
-    const response = await fetch("http://localhost:3000/templates");
+    const response = await fetch(`${API_BASE_URL}/templates`, {
+      headers: createAuthHeaders(),
+    });
     if (!response.ok) {
       throw new Error(`Server error: ${response.status}`);
     }
@@ -27,7 +58,9 @@ export const fetchPersonal = createAsyncThunk<
   { rejectValue: string }
 >("doc/fetchPersonal", async (_, { rejectWithValue }) => {
   try {
-    const response = await fetch("http://localhost:3000/personal");
+    const response = await fetch(`${API_BASE_URL}/personal`, {
+      headers: createAuthHeaders(),
+    });
     if (!response.ok) {
       throw new Error(`Server error: ${response.status}`);
     }
@@ -53,7 +86,6 @@ export const genWordDoc = createAsyncThunk<
       if (!response.ok) {
         throw new Error(`Не удалось загрузить шаблон: ${response.status}`);
       }
-      console.log(data);
       const content = await response.arrayBuffer();
       const zip = new PizZip(content);
       const doc = new Docxtemplater(zip, {
