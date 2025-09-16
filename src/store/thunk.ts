@@ -1,5 +1,11 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import type { Person, TemplateData, Templates } from "../types/types";
+import type {
+  Document,
+  Person,
+  ReviewerStep,
+  TemplateData,
+  Templates,
+} from "../types/types";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { saveAs } from "file-saver";
@@ -7,6 +13,7 @@ import type { AuthRequest, AuthResponse } from "../types/authTypes";
 import { API_BASE_URL } from "../constants";
 import { createAuthHeaders } from "../utils/createAuthHeaders";
 import { tokenManager } from "../utils/tokenManager";
+import axios from "axios";
 
 export const loginUser = createAsyncThunk<
   AuthResponse,
@@ -25,7 +32,8 @@ export const loginUser = createAsyncThunk<
       throw new Error(`Server error: ${response.status}`);
     }
     const data = await response.json();
-    tokenManager.setToken(data.token);
+    // tokenManager.setToken(data.token);
+    localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
     return data;
   } catch (error) {
@@ -109,3 +117,70 @@ export const genWordDoc = createAsyncThunk<
     }
   },
 );
+
+export const setRoute = createAsyncThunk<
+  Document,
+  { documentId: string; reviewers: ReviewerStep[] },
+  { rejectValue: string }
+>("routes/setRoute", async ({ documentId, reviewers }, { rejectWithValue }) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/documents/${documentId}/route`,
+      {
+        method: "POST",
+        headers: createAuthHeaders(),
+        body: JSON.stringify({ reviewers }),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+    const data = await response.json();
+    return Array.isArray(data) ? data[0] : data;
+  } catch (error) {
+    return rejectWithValue((error as Error).message);
+  }
+});
+
+export const approveDocument = createAsyncThunk<
+  Document,
+  string,
+  { rejectValue: string }
+>("routes/approveDocument", async (documentId, { rejectWithValue }) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/documents/${documentId}/approve`,
+      {
+        method: "POST",
+        headers: createAuthHeaders(),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
+    const data = await response.json();
+    return Array.isArray(data) ? data[0] : data;
+  } catch (error) {
+    return rejectWithValue((error as Error).message);
+  }
+});
+
+// export const setRoute = createAsyncThunk<
+//   Document,
+//   { documentId: string; reviewers: ReviewerStep[] }
+// >("routes/setRoute", async ({ documentId, reviewers }) => {
+//   const res = await axios.post(`api/documents/${documentId}/route`, {
+//     reviewers,
+//   });
+//   return res.data as Document;
+// });
+
+// export const approveDocument = createAsyncThunk<Document, string>(
+//   "routes/approveDocument",
+//   async (documentId) => {
+//     const res = await fetch(
+//       `${API_BASE_URL}/api/documents/${documentId}/approve`,
+//     );
+//     return res.data as Document;
+//   },
+// );

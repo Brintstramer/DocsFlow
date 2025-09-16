@@ -59,3 +59,11 @@ export interface ReviewerStep {
   deadline?: string; // дедлайн ISO
   status: "pending" | "approved" | "rejected";
 }
+
+export interface WSMessage {
+  type: string;
+  document?: Document;
+  documentId?: string;
+  updatedAt?: string;
+  [key: string]: unknown;
+}

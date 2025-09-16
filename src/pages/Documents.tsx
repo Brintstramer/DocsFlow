@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { http } from "../api/http";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import RouteSetup from "../components/RouteSetup";
 
 function Documents() {
   const dispatch = useDispatch<AppDispatch>();
@@ -19,6 +20,10 @@ function Documents() {
     useState<keyof Templates>("intLetter");
   const [recipientId, setRecipientId] = useState<string | null>(null);
   const [senderId, setSenderId] = useState<string | null>(null);
+
+  const [selectedDocForRoute, setSelectedDocForRoute] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
     dispatch(fetchTemplates());
@@ -230,6 +235,19 @@ function Documents() {
                   Управление версиями
                 </button>
                 <button
+                  onClick={() => setSelectedDocForRoute(doc.id)}
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: "#007bff",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                  }}
+                >
+                  Маршрут
+                </button>
+                <button
                   onClick={() => deleteDocument.mutate(doc.id)}
                   disabled={deleteDocument.isPending}
                   style={{
@@ -249,10 +267,64 @@ function Documents() {
         ) : (
           <div style={{ textAlign: "center", color: "#666", marginTop: 40 }}>
             <p>Здесь будут отображаться созданные документы</p>
-            <p>Создайте первый документ, чтобы начать работу с версиями</p>
           </div>
         )}
       </div>
+
+      {/* модалка маршрута */}
+      {selectedDocForRoute && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setSelectedDocForRoute(null)} // клик по фону закрывает модалку
+        >
+          <div
+            style={{
+              background: "white",
+              padding: 20,
+              borderRadius: 8,
+              maxWidth: 600,
+              width: "90%",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()} // предотвращаем закрытие при клике внутрь
+          >
+            {/* кнопка-крестик */}
+            <button
+              onClick={() => setSelectedDocForRoute(null)}
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                border: "none",
+                background: "transparent",
+                fontSize: 18,
+                cursor: "pointer",
+              }}
+            >
+              ✕
+            </button>
+
+            <RouteSetup
+              documentId={selectedDocForRoute}
+              users={personal}
+              onClose={() => setSelectedDocForRoute(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

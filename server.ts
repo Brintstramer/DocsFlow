@@ -3,8 +3,11 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import fs from "fs";
 import jwt from "jsonwebtoken";
-import type { Document, Person } from "./src/types/types";
+import type { Document, Person, ReviewerStep } from "./src/types/types";
 import type { AuthRequest, User } from "./src/types/authTypes";
+import { createServer } from "http";
+import { WebSocketServer, WebSocket } from "ws";
+// import type WS from "ws";
 
 declare module "express-serve-static-core" {
   interface Request {
@@ -56,14 +59,7 @@ let db: Database = {
   documents: [],
   personal: [],
   templates: {},
-  users: [
-    {
-      id: "1",
-      name: "admin",
-      email: "admin@admin.com",
-      password: "admin123", // В реальном приложении храните хеши паролей
-    },
-  ],
+  users: [],
 };
 
 try {
@@ -72,45 +68,65 @@ try {
   db = { ...db, ...parsedData };
 } catch {
   console.log("Создаем новую БД или используем дефолтные данные");
-  // // Дефолтные данные для тестирования
-  // db = {
-  //   documents: [
-  //     {
-  //       id: "1",
-  //       title: "Тестовый документ",
-  //       content: "Содержание тестового документа",
-  //       createdAt: new Date().toISOString(),
-  //       updatedAt: new Date().toISOString(),
-  //       versions: [],
-  //     },
-  //   ],
-  //   personal: [
-  //     {
-  //       id: "1",
-  //       name: "Иванов Иван Иванович",
-  //       position: "Инженер",
-  //       workshop: "Цех №1",
-  //     },
-  //     {
-  //       id: "2",
-  //       name: "Петров Петр Петрович",
-  //       position: "Мастер",
-  //       workshop: "Цех №2",
-  //     },
-  //   ],
-  //   templates: {
-  //     intLetter: "Шаблон внутреннего письма",
-  //     extLetter: "Шаблон внешнего письма",
-  //     order: "Шаблон приказа",
-  //     instruction: "Шаблон распоряжения",
-  //   },
-  // };
 }
 
 // Сохранение данных в файл
 const saveDB = () => {
   fs.writeFileSync("db.json", JSON.stringify(db, null, 2));
 };
+
+// создаём http-сервер поверх express
+const server = createServer(app);
+
+// создаём WS-сервер
+const wss = new WebSocketServer({ server, path: "/ws" });
+
+function broadcast(data: unknown, exclude?: WebSocket | null) {
+  wss.clients.forEach((client) => {
+    if (
+      client.readyState === WebSocket.OPEN &&
+      (!exclude || client !== exclude)
+    ) {
+      client.send(JSON.stringify(data));
+    }
+  });
+}
+
+wss.on("connection", (ws, req) => {
+  console.log("🔌 WebSocket соединение:", req.url);
+
+  ws.on("message", (msg) => {
+    try {
+      const data = JSON.parse(msg.toString());
+      console.log("📩 Сообщение от клиента:", data);
+
+      switch (data.type) {
+        case "editing":
+          // ✏️ кто-то редактирует документ → разослать всем остальным
+          broadcast(data, ws);
+          break;
+
+        case "ping":
+          // можно использовать для поддержания соединения
+          ws.send(JSON.stringify({ type: "pong" }));
+          break;
+
+        default:
+          console.warn("⚠️ Неизвестный тип WS-сообщения:", data.type);
+      }
+    } catch (err) {
+      console.error("⚠️ Ошибка обработки WS-сообщения:", err);
+    }
+  });
+
+  ws.on("close", () => {
+    console.log("❌ WebSocket закрыт");
+  });
+
+  ws.on("error", (err) => {
+    console.error("⚠️ WebSocket ошибка:", err);
+  });
+});
 
 // Роут для аутентификации
 app.post("/api/auth/login", (req, res) => {
@@ -212,7 +228,21 @@ app.put("/api/documents/:id", authenticateToken, (req, res) => {
     updatedAt: new Date().toISOString(),
   };
   saveDB();
-  res.json(db.documents[index]);
+
+  const updatedDoc = db.documents[index];
+  res.json(updatedDoc);
+
+  // 🔔 Уведомляем всех клиентов через WS
+  const message = JSON.stringify({
+    type: "document_updated",
+    document: updatedDoc,
+  });
+
+  wss.clients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
 });
 
 app.delete("/api/documents/:id", authenticateToken, (req, res) => {
@@ -285,9 +315,67 @@ app.get("/api/documents/:id/export", authenticateToken, (req, res) => {
   res.send(content);
 });
 
+// Установка маршрута документа
+app.post("/api/documents/:id/route", authenticateToken, (req, res) => {
+  const reviewers: ReviewerStep[] = req.body.reviewers; // массив ReviewerStep
+  const doc = db.documents.find((d) => d.id === req.params.id);
+  if (!doc) {
+    return res.status(404).json({ message: "Документ не найден" });
+  }
+
+  doc.route = reviewers.map((r, i) => ({
+    ...r,
+    order: i + 1,
+    status: "pending",
+  }));
+  doc.status = "in_review";
+  saveDB();
+
+  // 🔔 Уведомим всех по WS
+  broadcast({
+    type: "route_set",
+    documentId: doc.id,
+    route: doc.route,
+  });
+
+  res.json(doc);
+});
+
+app.post("/api/documents/:id/approve", authenticateToken, (req, res) => {
+  const doc = db.documents.find((d) => d.id === req.params.id);
+  if (!doc || !doc.route)
+    return res.status(404).json({ message: "Документ не найден" });
+
+  const reviewer = doc.route.find(
+    (r) => r.userId === req.userId && r.status === "pending",
+  );
+  if (!reviewer)
+    return res.status(403).json({ message: "Вы не текущий рецензент" });
+
+  reviewer.status = "approved";
+  doc.updatedAt = new Date().toISOString();
+
+  // Проверяем, есть ли ещё
+  const next = doc.route.find((r) => r.status === "pending");
+  if (!next) {
+    doc.status = "approved";
+  }
+
+  saveDB();
+
+  broadcast({
+    type: "document_updated",
+    documentId: doc.id,
+    status: doc.status,
+    route: doc.route,
+  });
+
+  res.json(doc);
+});
+
 // Запуск сервера
-app.listen(PORT, () => {
-  console.log(`✅ Сервер запущен на http://localhost:${PORT}`);
+server.listen(PORT, () => {
+  console.log(`✅ Сервер + WebSocket запущен на http://localhost:${PORT}`);
   console.log("📋 Доступные эндпоинты:");
   console.log("  POST   /api/auth/login");
   console.log("  GET    /api/auth/verify");

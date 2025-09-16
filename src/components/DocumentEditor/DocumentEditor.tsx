@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useDispatch, useSelector } from "react-redux";
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { http, queryClient } from "../../api/http";
 import type { RootState } from "../../store/store";
 import {
@@ -23,6 +23,9 @@ const DocumentEditor = () => {
   const { documentId } = useParams<{ documentId: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [activeEditors, setActiveEditors] = useState<
+    { id: string; name: string; lastActive: string }[]
+  >([]);
 
   const { title, content, author, compareVersions, isEdited } = useSelector(
     (state: RootState) => state.editor,
@@ -110,22 +113,68 @@ const DocumentEditor = () => {
 
   const handleClearDiff = () => dispatch(setCompareVersions({}));
 
-  useWebSocket(`ws://localhost:3001/ws/documents/${documentId}`, (event) => {
-    try {
-      const data = JSON.parse(event.data);
+  const handleContentChange = (newValue: string) => {
+    dispatch(setContent(newValue));
 
-      if (data.type === "document_updated" && data.documentId === documentId) {
-        console.log(
-          `Документ был изменён пользователем ${data.author || "неизвестный"}`,
-        );
-
-        // Перезапрашиваем свежие данные
-        queryClient.invalidateQueries({ queryKey: ["document", documentId] });
-      }
-    } catch (error) {
-      console.error("Ошибка обработки WS-сообщения", error);
+    // Отправляем WS-сообщение о редактировании
+    if (author.trim()) {
+      sendMessage({
+        type: "editing",
+        documentId,
+        user: { id: "local", name: author }, // "local" можно заменить на реальный userId
+        timestamp: new Date().toISOString(),
+      });
     }
-  });
+  };
+
+  const token = localStorage.getItem("accessToken"); // JWT
+  const { lastMessage, sendMessage } = useWebSocket(
+    "ws://localhost:3001/ws",
+    token || undefined,
+  );
+
+  useEffect(() => {
+    if (!lastMessage) {
+      return;
+    }
+
+    if (
+      lastMessage.type === "document_updated" &&
+      lastMessage.document?.id === documentId
+    ) {
+      console.log("📌 Документ изменился:", lastMessage.document);
+
+      // ⚡ Обновляем кэш react-query напрямую без запроса к серверу
+      queryClient.setQueryData<Document>(
+        ["document", documentId],
+        lastMessage.document,
+      );
+    }
+
+    if (
+      lastMessage.type === "editing" &&
+      lastMessage.documentId === documentId
+    ) {
+      const editor = lastMessage.user as { id: string; name: string };
+      setActiveEditors((prev) => {
+        const others = prev.filter((e) => e.id !== editor.id);
+        return [...others, { ...editor, lastActive: new Date().toISOString() }];
+      });
+    }
+  }, [lastMessage, documentId]);
+
+  // Очистка "устаревших" редакторов
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveEditors((prev) =>
+        prev.filter(
+          (e) => new Date().getTime() - new Date(e.lastActive).getTime() < 5000,
+        ),
+      );
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   if (isLoading)
     return <div className={classes.systemMessage}>Загрузка документа...</div>;
@@ -144,6 +193,13 @@ const DocumentEditor = () => {
           ← Назад к документам
         </button>
         <h1>Редактор документов</h1>
+        <div className={classes.activeEditors}>
+          {activeEditors.map((e) => (
+            <div key={e.id} className={classes.editorIndicator}>
+              ✏️ {e.name} редактирует...
+            </div>
+          ))}
+        </div>
       </header>
 
       <div className={classes.editorSection}>
@@ -160,7 +216,7 @@ const DocumentEditor = () => {
           placeholder="Содержание документа"
           rows={10}
         /> */}
-        <RichTextEditor value={content} onChange={setContent} />
+        <RichTextEditor value={content} onChange={handleContentChange} />
         <input
           className={classes.input}
           value={author}
