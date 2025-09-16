@@ -1,6 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { loginUser } from "./thunk";
 import type { User } from "../types/authTypes";
+//comment
 
 interface InitialState {
   userData: User | null;
