@@ -12,8 +12,6 @@ import { saveAs } from "file-saver";
 import type { AuthRequest, AuthResponse } from "../types/authTypes";
 import { API_BASE_URL } from "../constants";
 import { createAuthHeaders } from "../utils/createAuthHeaders";
-import { tokenManager } from "../utils/tokenManager";
-import axios from "axios";
 
 export const loginUser = createAsyncThunk<
   AuthResponse,

@@ -1,6 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { loginUser } from "./thunk";
-import { tokenManager } from "../utils/tokenManager";
 import type { User } from "../types/authTypes";
 
 interface InitialState {
