@@ -3,9 +3,9 @@
     {
       "id": "1757965181718",
       "createdAt": "2025-09-15T19:39:41.719Z",
-      "updatedAt": "2025-09-16T06:15:35.459Z",
+      "updatedAt": "2025-09-16T12:17:26.248Z",
       "title": "intLetter-Иванов И.И.",
-      "content": "{\"blocks\":[{\"key\":\"i998\",\"text\":\"   fdas{\\\"recipient_name\\\":\\\"Иd sdfasdsdfsddfsdfsfd\\\",\\\"recipient_position\\\":\\\"Инженер\\\",\\\"recipient_workshop\\\":\\\"Цех 1\\\",\\\"sender_name\\\":\\\"Орлов О.О.\\\",\\\"sender_position\\\":\\\"Зам. начальника\\\",\\\"sender_workshop\\\":\\\"Цех 1\\\",\\\"date\\\":\\\"15 сентября 2025 г.\\\"}\",\"type\":\"unstyled\",\"depth\":0,\"inlineStyleRanges\":[],\"entityRanges\":[],\"data\":{}}],\"entityMap\":{}}",
+      "content": "{\"blocks\":[{\"key\":\"i998\",\"text\":\"   fdas{\\\"recipient_name\\\":\\\"Иd sadfsdfasdsdfsddfsdfsfd\\\",\\\"recipient_position\\\":\\\"Инженер\\\",\\\"recipient_workshop\\\":\\\"Цех 1\\\",\\\"sender_name\\\":\\\"Орлов О.О.\\\",\\\"sender_position\\\":\\\"Зам. начальника\\\",\\\"sender_workshop\\\":\\\"Цех 1\\\",\\\"date\\\":\\\"15 сентября 2025 г.\\\"}\",\"type\":\"unstyled\",\"depth\":0,\"inlineStyleRanges\":[],\"entityRanges\":[],\"data\":{}}],\"entityMap\":{}}",
       "versions": [
         {
           "versionNumber": 1,
@@ -55,6 +55,13 @@
           "content": "{\"blocks\":[{\"key\":\"i998\",\"text\":\"   fdas{\\\"recipient_name\\\":\\\"Иd sdfasdsdfsddfsdfsfd\\\",\\\"recipient_position\\\":\\\"Инженер\\\",\\\"recipient_workshop\\\":\\\"Цех 1\\\",\\\"sender_name\\\":\\\"Орлов О.О.\\\",\\\"sender_position\\\":\\\"Зам. начальника\\\",\\\"sender_workshop\\\":\\\"Цех 1\\\",\\\"date\\\":\\\"15 сентября 2025 г.\\\"}\",\"type\":\"unstyled\",\"depth\":0,\"inlineStyleRanges\":[],\"entityRanges\":[],\"data\":{}}],\"entityMap\":{}}",
           "author": "Admin",
           "timestamp": "2025-09-16T06:15:35.438Z"
+        },
+        {
+          "versionNumber": 8,
+          "title": "intLetter-Иванов И.И.",
+          "content": "{\"blocks\":[{\"key\":\"i998\",\"text\":\"   fdas{\\\"recipient_name\\\":\\\"Иd sadfsdfasdsdfsddfsdfsfd\\\",\\\"recipient_position\\\":\\\"Инженер\\\",\\\"recipient_workshop\\\":\\\"Цех 1\\\",\\\"sender_name\\\":\\\"Орлов О.О.\\\",\\\"sender_position\\\":\\\"Зам. начальника\\\",\\\"sender_workshop\\\":\\\"Цех 1\\\",\\\"date\\\":\\\"15 сентября 2025 г.\\\"}\",\"type\":\"unstyled\",\"depth\":0,\"inlineStyleRanges\":[],\"entityRanges\":[],\"data\":{}}],\"entityMap\":{}}",
+          "author": "Moder",
+          "timestamp": "2025-09-16T12:17:26.232Z"
         }
       ],
       "route": [
