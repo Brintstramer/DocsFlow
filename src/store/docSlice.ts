@@ -1,11 +1,10 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { fetchPersonal, fetchTemplates, genWordDoc } from "./thunk";
+import { fetchPersonal, fetchTemplates, genWordDoc } from "./docThunk";
 import type { Person, Templates } from "../types/types";
 
 interface InitialState {
   templates: Templates | null;
   personal: Person[];
-  documents: Document[];
   loading: boolean;
   error: string | null;
 }
@@ -13,7 +12,6 @@ interface InitialState {
 const initialState: InitialState = {
   templates: null,
   personal: [],
-  documents: [],
   loading: false,
   error: null,
 };

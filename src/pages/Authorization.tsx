@@ -1,15 +1,7 @@
 // import { useState, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
-// import { authApi } from "../utils/authApi";
-import { useNavigate } from "react-router-dom";
-// import { tokenManager } from "../utils/tokenManager";
-import type { AuthRequest } from "../types/authTypes";
-import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch, RootState } from "../store/store";
-import { useEffect } from "react";
-import { loginUser } from "../store/thunk";
 
-// type FormData = { name: string; email: string };
+type FormData = { name: string; email: string };
 
 function Authorization() {
   // const [form, setForm] = useState({ name: "", email: "" });
@@ -34,53 +26,14 @@ function Authorization() {
   //   }
   // }
 
-  const navigate = useNavigate();
-  const dispatch = useDispatch<AppDispatch>();
-
-  const { success, isAuth, loading } = useSelector(
-    (state: RootState) => state.auth,
-  );
-
   const {
     register,
     handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<AuthRequest>();
+    formState: { errors },
+  } = useForm<FormData>();
 
-  useEffect(() => {
-    if (isAuth && success) {
-      console.log("Успешная авторизация!");
-      navigate("/documents");
-    }
-  }, [isAuth, success, navigate]);
-
-  // const handleLogin = async (credentials: { name: string; email: string }) => {
-  //   try {
-  //     const response = await authApi.login(credentials);
-
-  //     if (response.success && response.token && response.user) {
-  //       tokenManager.setToken(response.token);
-  //       localStorage.setItem("user", JSON.stringify(response.user));
-  //       console.log("Успешная авторизация!");
-  //       navigate("/documents");
-  //     } else {
-  //       console.error("Ошибка авторизации:", response.message);
-  //       alert(response.message || "Ошибка авторизации");
-  //     }
-  //   } catch (error) {
-  //     console.error("Ошибка авторизации", error);
-  //     alert("Ошибка подключения к серверу");
-  //   }
-  // };
-
-  const onSubmit = async (data: AuthRequest) => {
-    console.log("Данные для авторизации:", data);
-    try {
-      await dispatch(loginUser(data)).unwrap();
-    } catch (error) {
-      // Ошибка уже обработана в thunk и slice
-      console.error("Ошибка авторизации:", error);
-    }
+  const onSubmit = (data: FormData) => {
+    console.log("Данные:", data);
   };
 
   return (
@@ -106,9 +59,7 @@ function Authorization() {
         />
         {errors.email && <p style={{ color: "red" }}>{errors.email.message}</p>}
       </div>
-      <button type="submit" disabled={loading}>
-        {isSubmitting ? "Вход..." : "Войти"}
-      </button>
+      <button type="submit">Отправить</button>
     </form>
   );
 }
