@@ -1,6 +1,16 @@
-import { NavLink } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { NavLink, useNavigate } from "react-router-dom";
+import { logout } from "../../store/authSlice";
 
 function MainNavigation() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  function logoutHandler() {
+    dispatch(logout());
+    navigate("/");
+  }
+
   return (
     <header>
       <nav>
@@ -15,7 +25,8 @@ function MainNavigation() {
             <NavLink to="/authorization">Войти</NavLink>
           </li>
           <li>
-            <NavLink to="/">Выйти</NavLink>
+            {/* <NavLink to="/">Выйти</NavLink> */}
+            <button onClick={logoutHandler}>Выйти</button>
           </li>
         </ul>
       </nav>

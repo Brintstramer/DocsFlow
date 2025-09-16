@@ -1,11 +1,17 @@
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../store/store";
-import { fetchPersonal, fetchTemplates, genWordDoc } from "../store/docThunk";
-import type { TemplateData, Templates } from "../types/types";
+import { fetchPersonal, fetchTemplates, genWordDoc } from "../store/thunk";
+import type { Document, TemplateData, Templates } from "../types/types";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { http } from "../api/http";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import RouteSetup from "../components/RouteSetup";
 
 function Documents() {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { loading, error, templates, personal } = useSelector(
     (state: RootState) => state.doc,
   );
@@ -15,10 +21,27 @@ function Documents() {
   const [recipientId, setRecipientId] = useState<string | null>(null);
   const [senderId, setSenderId] = useState<string | null>(null);
 
+  const [selectedDocForRoute, setSelectedDocForRoute] = useState<string | null>(
+    null,
+  );
+
   useEffect(() => {
     dispatch(fetchTemplates());
     dispatch(fetchPersonal());
   }, [dispatch]);
+
+  // Загружаем список документов через React Query
+  const {
+    data: documents = [],
+    isLoading: isLoadingDocs,
+    isError,
+  } = useQuery({
+    queryKey: ["documents"],
+    queryFn: async (): Promise<Document[]> => {
+      const res = await http.get<Document[]>("/documents");
+      return res;
+    },
+  });
 
   const recipient = personal.find((p) => p.id === recipientId);
   const sender = personal.find((p) => p.id === senderId);
@@ -42,7 +65,58 @@ function Documents() {
     [recipient, sender],
   );
 
-  const baseName = `${selectedTemplate}-${recipient?.name}`;
+  const baseName = `${selectedTemplate}-${recipient?.name || "document"}`;
+
+  const createDocument = useMutation({
+    mutationFn: async () => {
+      const newDocument = {
+        title: baseName,
+        content: JSON.stringify(data),
+        versions: [],
+      };
+
+      const res = await http.post<Document>("/documents", newDocument);
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+    },
+    onError: (err) => {
+      console.error("Ошибка создания документа:", err);
+    },
+  });
+
+  const handleGenerateDocument = async () => {
+    if (!templates || !recipient || !sender) return;
+
+    // 1. Сначала генерируем Word-документ и скачиваем
+    await dispatch(
+      genWordDoc({
+        templateFile: templates[selectedTemplate], // путь к docx-шаблону
+        data,
+        baseName,
+      }),
+    );
+
+    // 2. Потом сохраняем в БД
+    createDocument.mutate();
+  };
+
+  const handleEditVersions = (documentId: string) => {
+    navigate(`/documents/${documentId}/versions`);
+  };
+
+  const deleteDocument = useMutation({
+    mutationFn: async (id: string) => {
+      await http.delete(`/documents/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+    },
+    onError: (err) => {
+      console.error("Ошибка удаления документа:", err);
+    },
+  });
 
   if (loading && !templates) return <p>Загрузка базы...</p>;
   if (error && !templates) {
@@ -51,75 +125,206 @@ function Documents() {
   if (!templates) {
     return null;
   }
-  console.log(personal);
 
   return (
-    <div style={{ padding: 20, display: "grid", gap: 16, maxWidth: 560 }}>
+    <div style={{ padding: 20, display: "grid", gap: 16, maxWidth: 800 }}>
       <h1>Генерация документа Word</h1>
-      <div>
-        <label>Выберите документ: </label>
-        <select
-          value={selectedTemplate}
-          onChange={(event) =>
-            setSelectedTemplate(event.target.value as keyof Templates)
+
+      {/* Секция генерации нового документа */}
+      <div style={{ border: "1px solid #ccc", padding: 20, borderRadius: 8 }}>
+        <h2>Создать новый документ</h2>
+        <div>
+          <label>Выберите документ: </label>
+          <select
+            value={selectedTemplate}
+            onChange={(event) =>
+              setSelectedTemplate(event.target.value as keyof Templates)
+            }
+            disabled={loading}
+          >
+            <option value="intLetter">Внутреннее письмо</option>
+            <option value="extLetter">Внешнее письмо</option>
+            <option value="order">Приказ</option>
+            <option value="instruction">Распоряжение</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Выберите получателя: </label>
+          <select
+            value={recipientId ?? ""}
+            onChange={(e) => setRecipientId(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">--не выбрано--</option>
+            {personal.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.workshop} — {item.position} — {item.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label>Выберите отправителя: </label>
+          <select
+            value={senderId ?? ""}
+            onChange={(e) => setSenderId(e.target.value)}
+            disabled={loading}
+          >
+            <option value="">--не выбрано--</option>
+            {personal.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.workshop} — {item.position} — {item.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          onClick={handleGenerateDocument}
+          disabled={
+            loading || !recipientId || !senderId || createDocument.isPending
           }
-          disabled={loading}
+          style={{ marginTop: 16 }}
         >
-          <option value="intLetter">Внутреннее письмо</option>
-          <option value="extLetter">Внешнее письмо</option>
-          <option value="order">Приказ</option>
-          <option value="instruction">Распоряжение</option>
-        </select>
+          {createDocument.isPending ? "Генерация..." : "Создать документ"}
+        </button>
+
+        {error && <p style={{ color: "crimson" }}>Ошибка: {error}</p>}
       </div>
 
-      <div>
-        <label>Выберите получателя: </label>
-        <select
-          value={recipientId ?? ""}
-          onChange={(e) => setRecipientId(e.target.value)}
-          disabled={loading}
-        >
-          <option>--не выбрано--</option>
-          {personal.map((item) => (
-            <option key={`${item.id}`} value={item.id}>
-              {item.workshop} — {item.position} — {item.name}
-            </option>
-          ))}
-        </select>
+      {/* Секция истории документов */}
+      <div style={{ border: "1px solid #ccc", padding: 20, borderRadius: 8 }}>
+        <h2>История документов</h2>
+        {isLoadingDocs ? (
+          <p>Загрузка документов...</p>
+        ) : isError ? (
+          <p style={{ color: "crimson" }}>Ошибка загрузки документов</p>
+        ) : documents.length > 0 ? (
+          <div style={{ display: "grid", gap: 12 }}>
+            {documents.map((doc, index) => (
+              <div
+                key={index}
+                style={{
+                  padding: 12,
+                  border: "1px solid #eee",
+                  borderRadius: 6,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: "bold" }}>{doc.title}</div>
+                  <div style={{ fontSize: 14, color: "#666" }}>
+                    {new Date(doc.createdAt).toLocaleDateString("ru-RU")}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleEditVersions(doc.id)}
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: "#007bff",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                  }}
+                >
+                  Управление версиями
+                </button>
+                <button
+                  onClick={() => setSelectedDocForRoute(doc.id)}
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: "#007bff",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                  }}
+                >
+                  Маршрут
+                </button>
+                <button
+                  onClick={() => deleteDocument.mutate(doc.id)}
+                  disabled={deleteDocument.isPending}
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: "crimson",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                  }}
+                >
+                  {deleteDocument.isPending ? "Удаление..." : "Удалить"}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ textAlign: "center", color: "#666", marginTop: 40 }}>
+            <p>Здесь будут отображаться созданные документы</p>
+          </div>
+        )}
       </div>
 
-      <div>
-        <label>Выберите отправителя: </label>
-        <select
-          value={senderId ?? ""}
-          onChange={(e) => setSenderId(e.target.value)}
-          disabled={loading}
+      {/* модалка маршрута */}
+      {selectedDocForRoute && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setSelectedDocForRoute(null)} // клик по фону закрывает модалку
         >
-          <option>--не выбрано--</option>
-          {personal.map((item) => (
-            <option key={`${item.id}`} value={item.id}>
-              {item.workshop} — {item.position} — {item.name}
-            </option>
-          ))}
-        </select>
-      </div>
+          <div
+            style={{
+              background: "white",
+              padding: 20,
+              borderRadius: 8,
+              maxWidth: 600,
+              width: "90%",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()} // предотвращаем закрытие при клике внутрь
+          >
+            {/* кнопка-крестик */}
+            <button
+              onClick={() => setSelectedDocForRoute(null)}
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                border: "none",
+                background: "transparent",
+                fontSize: 18,
+                cursor: "pointer",
+              }}
+            >
+              ✕
+            </button>
 
-      <button
-        onClick={() => {
-          dispatch(
-            genWordDoc({
-              templateFile: templates[selectedTemplate],
-              data,
-              baseName,
-            }),
-          );
-        }}
-        disabled={loading || !recipientId || !senderId}
-      >
-        {loading ? "Генерация..." : "Создать документ"}
-      </button>
-
-      {error && <p style={{ color: "crimson" }}>Ошибка: {error}</p>}
+            <RouteSetup
+              documentId={selectedDocForRoute}
+              users={personal}
+              onClose={() => setSelectedDocForRoute(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
